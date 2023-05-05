@@ -51,41 +51,16 @@ class LSTMBaseline(nn.Module):
         # self._act_enc = TimeDistributed(act_enc, num_outputs=1).to(self._device)
         # self._enc = TimeDistributed(enc, num_outputs=1).to(self._device)
 
-    def _build_enc_hidden_layers(self) -> Tuple[nn.ModuleList, int]:
-        """
-        Builds hidden layers for encoder
-        :return: nn.ModuleList of hidden Layers, size of output of last layer
-        """
-        raise NotImplementedError
         # if self.c.gru:
         #     self._lstm_layer = nn.GRU(input_size= 2 * lod, hidden_size=5 * lod, batch_first=True).to(self._device)
         # else:
         #     self._lstm_layer = nn.LSTM(input_size=2 * lod, hidden_size=5 * lod, batch_first=True).to(self._device)
         self._planet_layer = TransitionModel(args)
 
-    def _build_obs_hidden_layers(self) -> Tuple[nn.ModuleList, int]:
-        """
-        Builds hidden layers for encoder
-        :return: nn.ModuleList of hidden Layers, size of output of last layer
-        """
-        raise NotImplementedError
         # SimpleDecoder._build_hidden_layers = self._build_dec_hidden_layers
         # self._dec = TimeDistributed(SimpleDecoder(out_dim=target_dim), num_outputs=2).to(self._device)
         self._dec = SymbolicEncoder(args)
 
-    def _build_act_hidden_layers(self) -> Tuple[nn.ModuleList, int]:
-        """
-        Builds hidden layers for encoder
-        :return: nn.ModuleList of hidden Layers, size of output of last layer
-        """
-        raise NotImplementedError
-
-    def _build_dec_hidden_layers(self) -> Tuple[nn.ModuleList, int]:
-        """
-        Builds hidden layers for mean decoder
-        :return: nn.ModuleList of hidden Layers, size of output of last layer
-        """
-        raise NotImplementedError
         self._shuffle_rng = np.random.RandomState(42)  # rng for shuffling batches
 
 
