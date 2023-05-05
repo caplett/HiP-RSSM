@@ -5,6 +5,7 @@ import time as t
 from metaWorldModels.ssm.ssmEncoderDecoder.Encoder import EncoderSimple
 from metaWorldModels.ssm.ssmEncoderDecoder.Decoder import SimpleDecoder
 from typing import Tuple
+from metaWorldModels.ssm.models import TransitionModel, SymbolicObservationModel, SymbolicEncoder
 optim = torch.optim
 nn = torch.nn
 
@@ -36,25 +37,19 @@ class LSTMBaseline(nn.Module):
         self._enc_out_normalization = self.c.enc_out_norm
 
         # main model
-        EncoderSimple._build_hidden_layers = self._build_obs_hidden_layers
-        obs_enc = EncoderSimple(lod, output_normalization=self._enc_out_normalization)
-        EncoderSimple._build_hidden_layers = self._build_act_hidden_layers
-        act_enc = EncoderSimple(lod, output_normalization=self._enc_out_normalization)
-        EncoderSimple._build_hidden_layers = self._build_enc_hidden_layers
-        enc = EncoderSimple(self._lsd, output_normalization=self._enc_out_normalization)
-        self._obs_enc = TimeDistributed(obs_enc, num_outputs=1).to(self._device)
-        self._act_enc = TimeDistributed(act_enc, num_outputs=1).to(self._device)
-        self._enc = TimeDistributed(enc, num_outputs=1).to(self._device)
+        # EncoderSimple._build_hidden_layers = self._build_obs_hidden_layers
+        # obs_enc = EncoderSimple(lod, output_normalization=self._enc_out_normalization)
+        self._obs_enc = SymbolicObservationModel(args)
 
-        if self.c.gru:
-            self._lstm_layer = nn.GRU(input_size= 2 * lod, hidden_size=5 * lod, batch_first=True).to(self._device)
-        else:
-            self._lstm_layer = nn.LSTM(input_size=2 * lod, hidden_size=5 * lod, batch_first=True).to(self._device)
+        # EncoderSimple._build_hidden_layers = self._build_act_hidden_layers
+        # act_enc = EncoderSimple(lod, output_normalization=self._enc_out_normalization)
 
-        SimpleDecoder._build_hidden_layers = self._build_dec_hidden_layers
-        self._dec = TimeDistributed(SimpleDecoder(out_dim=target_dim), num_outputs=2).to(self._device)
+        # EncoderSimple._build_hidden_layers = self._build_enc_hidden_layers
+        # enc = EncoderSimple(self._lsd, output_normalization=self._enc_out_normalization)
 
-        self._shuffle_rng = np.random.RandomState(42)  # rng for shuffling batches
+        # self._obs_enc = TimeDistributed(obs_enc, num_outputs=1).to(self._device)
+        # self._act_enc = TimeDistributed(act_enc, num_outputs=1).to(self._device)
+        # self._enc = TimeDistributed(enc, num_outputs=1).to(self._device)
 
     def _build_enc_hidden_layers(self) -> Tuple[nn.ModuleList, int]:
         """
@@ -62,6 +57,11 @@ class LSTMBaseline(nn.Module):
         :return: nn.ModuleList of hidden Layers, size of output of last layer
         """
         raise NotImplementedError
+        # if self.c.gru:
+        #     self._lstm_layer = nn.GRU(input_size= 2 * lod, hidden_size=5 * lod, batch_first=True).to(self._device)
+        # else:
+        #     self._lstm_layer = nn.LSTM(input_size=2 * lod, hidden_size=5 * lod, batch_first=True).to(self._device)
+        self._planet_layer = TransitionModel(args)
 
     def _build_obs_hidden_layers(self) -> Tuple[nn.ModuleList, int]:
         """
@@ -69,6 +69,9 @@ class LSTMBaseline(nn.Module):
         :return: nn.ModuleList of hidden Layers, size of output of last layer
         """
         raise NotImplementedError
+        # SimpleDecoder._build_hidden_layers = self._build_dec_hidden_layers
+        # self._dec = TimeDistributed(SimpleDecoder(out_dim=target_dim), num_outputs=2).to(self._device)
+        self._dec = SymbolicEncoder(args)
 
     def _build_act_hidden_layers(self) -> Tuple[nn.ModuleList, int]:
         """
@@ -83,6 +86,7 @@ class LSTMBaseline(nn.Module):
         :return: nn.ModuleList of hidden Layers, size of output of last layer
         """
         raise NotImplementedError
+        self._shuffle_rng = np.random.RandomState(42)  # rng for shuffling batches
 
 
     def forward(self, obs_batch: torch.Tensor, act_batch: torch.Tensor, obs_valid_batch: torch.Tensor) -> Tuple[float, float]:
