@@ -64,7 +64,8 @@ class TransitionModel(jit.ScriptModule):
         prev_state: torch.Tensor,
         actions: torch.Tensor,
         prev_belief: torch.Tensor,
-        observations: Optional[torch.Tensor] = None,
+        observations: torch.Tensor,
+        obs_valid_flags: torch.Tensor,
         nonterminals: Optional[torch.Tensor] = None,
     ) -> List[torch.Tensor]:
         '''
@@ -86,9 +87,7 @@ class TransitionModel(jit.ScriptModule):
         beliefs[0], prior_states[0], posterior_states[0] = prev_belief, prev_state, prev_state
         # Loop over time sequence
         for t in range(T - 1):
-            _state = (
-                prior_states[t] if observations is None else posterior_states[t]
-            )  # Select appropriate previous state
+            _state = posterior_states[t] # Select appropriate previous state
             _state = (
                 _state if nonterminals is None else _state * nonterminals[t]
             )  # Mask if previous transition was terminal
@@ -111,6 +110,14 @@ class TransitionModel(jit.ScriptModule):
                 posterior_states[t + 1] = posterior_means[t + 1] + posterior_std_devs[t + 1] * torch.randn_like(
                     posterior_means[t + 1]
                 )
+            
+            if not obs_valid_flags[t]:
+                posterior_means[t + 1] = prior_means[t+1]
+                posterior_std_devs[t + 1] = prior_std_devs[t+1]
+                posterior_states[t + 1] = prior_states[t+1]
+
+
+
         # Return new hidden states
         hidden = [
             torch.stack(beliefs[1:], dim=0),
