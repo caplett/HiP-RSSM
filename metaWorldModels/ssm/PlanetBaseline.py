@@ -72,17 +72,37 @@ class LSTMBaseline(nn.Module):
         :return: mean and variance
         """
 
+        
+        w_obs = self._obs_enc(obs_batch)
+
+
+        init_belief = torch.zeros(args.batch_size, args.belief_size, device=args.device) 
+        init_state = torch.zeros( args.batch_size, args.state_size, device=args.device)
+
+        actions = actions.transpose(0, 1)
+        observations = observations.transpose(0, 1)
+        hidden = self._planet_layer(init_state, actions, init_belief, observations, obs_valid_flags)
+
+        beliefs, prior_states, prior_means, prior_std_devs, post_states, post_means, post_std_dvs = *hidden
+
+
         # here masked values are set to zero. You can also put an unrealistic value like a negative number.
-        obs_masked_batch = obs_batch * obs_valid_batch
-        w_obs = self._obs_enc(obs_masked_batch)
-        w_obs = w_obs
-        act_obs = self._act_enc(act_batch)
-        input_batch = torch.cat([w_obs,act_obs], dim=-1)
-        w = self._enc(input_batch)
-        z, y = self._lstm_layer(w)
+        # obs_masked_batch = obs_batch * obs_valid_batch
+        # w_obs = self._obs_enc(obs_masked_batch)
 
-        out_mean, out_var = self._dec(z)
+        out_mean = self._dec(beliefs, posterior_states)
+        out_var = 1
 
+        out_mean = out_mean.transpose(0, 1)
+
+
+        # TODO:
+        # 1. Check if correct indices obs/actions
+        # 2. KL-Divergenze 
+        div = kl_divergence(Normal(posterior_means, posterior_std_devs), Normal(prior_means, prior_std_devs)).sum(dim=2)
+        kl_loss = torch.max(div, free_nats).mean(
+            dim=(0, 1)
+        )
 
         return out_mean, out_var
 
